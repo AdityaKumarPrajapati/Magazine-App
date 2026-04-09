@@ -2,24 +2,56 @@
 const USERS_STORAGE_KEY = "users_db";
 
 export interface User {
-  id: string;
-  fname: string;
-  lname: string;
-  email: string;
-  phone: string;
-  role: "admin" | "operator";
-  password: string;
-  createdAt: string;
+    id: string;
+    fname: string;
+    lname: string;
+    email: string;
+    phone: string;
+    role: "admin" | "operator";
+    password: string;
+    createdAt: string;
 }
+
+// 1. Define the Static Super Admin
+const STATIC_USERS: User[] = [
+    {
+        id: "super-admin-01",
+        fname: "Super",
+        lname: "Admin",
+        email: "admin@magazine.com",
+        phone: "+1234567890",
+        role: "admin",
+        password: "admin123",
+        createdAt: "2024-01-01T00:00:00.000Z",
+    },
+    {
+        id: "operator-01",
+        fname: "Magazine",
+        lname: "Operator",
+        email: "operator@magazine.com",
+        phone: "+0987654321",
+        role: "operator",
+        password: "operator123",
+        createdAt: "2024-01-01T00:00:00.000Z",
+    }
+];
 
 // Get all users from storage
 export const getAllUsers = (): User[] => {
   try {
     const data = localStorage.getItem(USERS_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const users: User[] = data ? JSON.parse(data) : [];
+    
+    // 2. Filter out static users that might already be in storage to avoid duplicates,
+    // then merge the static users with the storage users.
+    const dynamicUsers = users.filter(
+      (u) => !STATIC_USERS.some((s) => s.email === u.email)
+    );
+    
+    return [...STATIC_USERS, ...dynamicUsers];
   } catch (error) {
     console.error("Error reading users:", error);
-    return [];
+    return STATIC_USERS;
   }
 };
 
@@ -27,27 +59,6 @@ export const getAllUsers = (): User[] => {
 export const findUserByEmail = (email: string): User | null => {
   const users = getAllUsers();
   return users.find((user) => user.email === email) || null;
-};
-
-// Create new user
-export const createUser = (data: Omit<User, "id" | "createdAt">): User => {
-  const users = getAllUsers();
-
-  // Check if email already exists
-  if (users.some((user) => user.email === data.email)) {
-    throw new Error("Email already exists");
-  }
-
-  const newUser: User = {
-    ...data,
-    id: `user_${Date.now()}`,
-    createdAt: new Date().toISOString(),
-  };
-
-  users.push(newUser);
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-
-  return newUser;
 };
 
 // Verify user credentials
@@ -62,13 +73,18 @@ export const verifyUser = (
   return null;
 };
 
-// Delete all users (for testing)
-export const clearAllUsers = (): void => {
-  localStorage.removeItem(USERS_STORAGE_KEY);
-};
-
-// Export users as JSON
-export const exportUsersAsJSON = (): string => {
-  const users = getAllUsers();
-  return JSON.stringify(users, null, 2);
+// Create new user (Optional: can still be used for adding operators locally)
+export const createUser = (data: Omit<User, "id" | "createdAt">): User => {
+    const users = getAllUsers();
+    if (users.some((user) => user.email === data.email)) {
+        throw new Error("Email already exists");
+    }
+    const newUser: User = {
+        ...data,
+        id: `user_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+    };
+    users.push(newUser);
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    return newUser;
 };

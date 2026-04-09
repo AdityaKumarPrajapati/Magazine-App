@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User, verifyUser, findUserByEmail } from "../utils/userStorage";
+// Import the User interface from your storage utility
+import { User, verifyUser } from "../utils/userStorage";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -15,7 +16,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is logged in on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
@@ -30,13 +30,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
+    // This now calls the verifyUser logic which includes our Static Admin
     const user = verifyUser(email, password);
+    
     if (!user) {
       throw new Error("Invalid email or password");
     }
-    setCurrentUser(user);
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    return user;
+
+    // Security: Remove password before storing in state/localStorage
+    const { password: _, ...userWithoutPassword } = user;
+    
+    setCurrentUser(userWithoutPassword as User);
+    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword));
+    return userWithoutPassword as User;
   };
 
   const logout = () => {
